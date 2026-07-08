@@ -1,2 +1,2 @@
 # HRMTransitWebsite
-Streamlit website for modelling and predicting Halifax Public Transportation bus performance
+Streamlit website for displaying and predicting Halifax Public Transportation bus performance
