@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from data_processing import mm_ss_to_seconds, seconds_to_mm_ss
+from transit_data_clean import mm_ss_to_seconds, seconds_to_mm_ss
 
 #load data. Use @st.cache_data() to make sure it only needs to be loaded once
 @st.cache_data()
