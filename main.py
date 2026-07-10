@@ -1,34 +1,13 @@
 import streamlit as st
 import pandas as pd
-
+from data_processing import mm_ss_to_seconds, seconds_to_mm_ss
 
 #load data. Use @st.cache_data() to make sure it only needs to be loaded once
 @st.cache_data()
 def load_data(file):
     return pd.read_csv(file)
 
-def mm_ss_to_seconds(time_str):
-    """Converts a 'MM:SS' or '-MM:SS' string into total integer seconds."""
-    if pd.isna(time_str) or not isinstance(time_str, str) or ':' not in time_str:
-        return 0
-    
-    is_negative = time_str.startswith('-')
-    clean_str = time_str.lstrip('-')
-    
-    parts = clean_str.split(':')
-    minutes = int(parts[0])
-    seconds = int(parts[1])
-    
-    total_seconds = (minutes * 60) + seconds
-    return -total_seconds if is_negative else total_seconds
 
-def seconds_to_mm_ss(total_seconds):
-    """Converts integer seconds back into a clean 'MM:SS' string."""
-    sign = "-" if total_seconds < 0 else ""
-    total_seconds = abs(int(total_seconds))
-    mins = total_seconds // 60
-    secs = total_seconds % 60
-    return f"{sign}{mins}:{secs:02d}"
 
 data = load_data(r"C:\Users\joel regular\Downloads\Git\HRMTransitWebsite-1\halifax_transit_simulated.csv")
 st.title("Welcome to The Halifax Transit Data Website (W.I.P)")
