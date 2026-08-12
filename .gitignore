@@ -217,9 +217,6 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
-# Ignore all files in this folder by default
-*
-
-# Un-ignore (keep) only the target dataset
-!halifax_transit_simulated.csv
-!.gitignore
+#Ignore the huge raw CSV
+halifax_transit_clean.csv
+*.csv
