@@ -220,3 +220,7 @@ __marimo__/
 #Ignore the huge raw CSV
 halifax_transit_clean.csv
 *.csv
+
+# Ignore raw GTFS static feed files
+*.txt
+!requirements.txt
