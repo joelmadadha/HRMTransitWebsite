@@ -180,7 +180,7 @@ with tab1:
                             avg_delay = sub_df["Estimated Delay (min)"].mean()
                             max_row = sub_df.loc[sub_df["Estimated Delay (min)"].idxmax()]
 
-                            st.markdown(f"#### 📍 {r_label}")
+                            st.markdown(f"#### {r_label}")
                             st.divider()
                             st.metric("Avg Delay", f"{avg_delay:.1f} min")
                             st.metric("Peak Time", f"{max_row['Timestamp']}")
@@ -192,7 +192,7 @@ with tab1:
                     avg_delay = sub_df["Estimated Delay (min)"].mean()
                     max_row = sub_df.loc[sub_df["Estimated Delay (min)"].idxmax()]
 
-                    st.markdown(f"#### 📍 {r_label}")
+                    st.markdown(f"#### {r_label}")
                     st.divider()
 
                     kpi1, kpi2, kpi3 = st.columns(3)
@@ -298,7 +298,7 @@ with tab1:
                             fig_bar.update_layout(xaxis_title="Hour of Day", yaxis_title="Predicted Delay (Minutes)")
                             st.plotly_chart(fig_bar, use_container_width=True)
                 else:
-                    bar_tabs = st.tabs([f"📍 {lbl}" for lbl in unique_route_labels])
+                    bar_tabs = st.tabs([f"{lbl}" for lbl in unique_route_labels])
                     for tab, r_label in zip(bar_tabs, unique_route_labels):
                         with tab:
                             sub_df = chart_df[chart_df["Route Option"] == r_label]
@@ -314,7 +314,7 @@ with tab1:
                             st.plotly_chart(fig_bar, use_container_width=True)
 
             # --- WEATHER SIMULATOR (Driven by Primary Route) ---
-            with st.expander("🌧️ Weather 'What-If' Sensitivity Simulator", expanded=False):
+            with st.expander("Weather 'What-If' Sensitivity Simulator", expanded=False):
                 primary_combo = selected_combos[0]
                 st.write(f"Quantifies weather impact for baseline selection: **{primary_combo['label']}**.")
                 
@@ -347,7 +347,7 @@ with tab1:
                 st.plotly_chart(fig_weather, use_container_width=True)
 
             # --- MODEL EXPLAINABILITY ENGINE (Tree SHAP) ---
-            with st.expander("🧠 Feature Driver Explainer ('Why is this trip delayed?')", expanded=False):
+            with st.expander("Feature Driver Explainer ('Why is this trip delayed?')", expanded=False):
                 st.write(f"Calculates feature contributions (Tree SHAP) for baseline selection: **{primary_combo['label']}**.")
                 
                 # Fetch baseline feature grid
