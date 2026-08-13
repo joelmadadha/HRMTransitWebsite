@@ -27,7 +27,7 @@ A machine learning-powered web application that predicts schedule-based delays f
 
 ---
 
-## How This was Made
+## How This Was Made
 
 * **Web Framework:** [Streamlit](https://streamlit.io/)
 * **Machine Learning:** [XGBoost](https://xgboost.readthedocs.io/) (Gradient Boosted Decision Trees)
@@ -74,6 +74,6 @@ streamlit run website.py
 
 ---
 
-##Contact Information
+## Contact Information
 * **Name:** Joel Madadha
 * **Email:** joelmadadha@gmail.com
