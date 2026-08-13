@@ -378,7 +378,7 @@ with tab1:
                 st.plotly_chart(fig_shap, use_container_width=True)
 
             # --- CONDITIONAL HIGHLIGHTED DATA TABLE ---
-            st.subheader("📋 Query Data Table")
+            st.subheader("Query Data Table")
             try:
                 styled_df = results_df.style.map(style_delay_cell, subset=["Estimated Delay"])
             except AttributeError:
@@ -390,7 +390,7 @@ with tab1:
 # TAB 2: HISTORICAL DATA EXPLORATION
 # ====================================
 with tab2:
-    st.header("📊 Historical Transit Performance & Analytics")
+    st.header("Historical Transit Performance & Analytics")
     st.write("This tab is for exploring historical performace of bus routes in Halifax")
 
     # --- 1. Route & Branch Selection ---
@@ -443,7 +443,7 @@ with tab2:
         st.markdown("---")
 
         # --- 3. Interactive Historical Breakdown ---
-        st.subheader("📈 Historical Delay Patterns & Variance")
+        st.subheader("Historical Delay Patterns & Variance")
 
         col_metric, col_chart_type = st.columns([2, 1])
 
