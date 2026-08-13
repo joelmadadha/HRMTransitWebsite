@@ -8,7 +8,7 @@ import numpy as np
 
 @st.cache_data
 def load_data():
-    df = pd.read_csv("halifax_transit_clean.parquet")
+    df = pd.read_parquet("halifax_transit_clean.parquet")
     df["Start Time"] = pd.to_datetime(df["Start Time"])
     
     # Extract temporal features for exploration
