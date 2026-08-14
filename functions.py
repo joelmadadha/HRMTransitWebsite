@@ -21,7 +21,7 @@ def load_data(relative_filename):
             return None
 
         # Load your data
-        df = pd.read_csv(full_path) # adjust reader as needed
+        df = pd.read_parquet(full_path) # adjust reader as needed
         return df
 
     except Exception as e:
