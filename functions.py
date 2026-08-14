@@ -5,46 +5,29 @@ import pandas as pd
 from xgboost import XGBRegressor
 import json
 import numpy as np
+import os
 
+# Temporarily remove @st.cache_data while debugging
 @st.cache_data
-def load_data():
-    df = pd.read_parquet("halifax_transit_clean.parquet")
-    
-    # Ensure Start Time is datetime
-    if not pd.api.types.is_datetime64_any_dtype(df["Start Time"]):
-        df["Start Time"] = pd.to_datetime(df["Start Time"])
+def load_data(relative_filename):
+    try:
+        # Use absolute path resolving relative to this script file
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        full_path = os.path.join(script_dir, relative_filename)
+        
+        # Check if file exists before attempting load
+        if not os.path.exists(full_path):
+            st.error(f"File not found at resolved path: {full_path}")
+            return None
 
-    # Extract temporal features (casting to 'category' saves huge amounts of RAM)
-    df["Hour"] = df["Start Time"].dt.hour.astype("int8")
-    df["Month"] = df["Start Time"].dt.month_name().astype("category")
-    df["Day of the Week"] = df["Start Time"].dt.day_name().astype("category")
+        # Load your data
+        df = pd.read_csv(full_path) # adjust reader as needed
+        return df
 
-    # Identify Branch column
-    branch_col = "route_branch" if "route_branch" in df.columns else ("Branch" if "Branch" in df.columns else "Route")
-
-    # Base Route column extraction
-    if "Route" in df.columns and df["Route"].nunique() < df[branch_col].nunique():
-        route_col = "Route"
-    else:
-        df["Route_Base"] = df[branch_col].astype(str).str.split("-").str[0].str.strip().astype("category")
-        route_col = "Route_Base"
-
-    # VECTORIZED Branch_Clean (Replaces the slow .apply() lambda loop!)
-    branch_str = df[branch_col].astype(str)
-    has_underscore = branch_str.str.contains("_", regex=False)
-    df["Branch_Clean"] = branch_str.where(~has_underscore, branch_str.str.split("_").str[1]).astype("category")
-
-    # Build GTFS branch lookup table
-    gtfs_cols = ["route_id", "route_length_km", "crosses_bridge", "num_stops", "route_type", "direction_sin", "direction_cos"]
-    existing_gtfs_cols = [c for c in gtfs_cols if c in df.columns]
-
-    if existing_gtfs_cols:
-        agg_dict = {c: "max" if c == "crosses_bridge" else "mean" for c in existing_gtfs_cols}
-        branch_lookup = df.groupby(branch_col)[existing_gtfs_cols].agg(agg_dict).reset_index()
-    else:
-        branch_lookup = pd.DataFrame()
-
-    return df, branch_lookup, route_col, branch_col
+    except Exception as e:
+        st.error("An error occurred inside load_data():")
+        st.exception(e)
+        return None
 
 @st.cache_resource
 def load_model():
