@@ -5,14 +5,14 @@ import numpy as np
 missing_values = ["", " ", "NA", "N/A", "M"]
 
 # load datasets
-data = pd.read_csv(r"C:\Users\joel regular\Downloads\Git\HRMTransitWebsite\halifax_transit_clean.csv")
+data = pd.read_csv(r"halifax_transit_clean")
 weather = pd.read_csv(
-    r"C:\Users\joel regular\Downloads\Git\HRMTransitWebsite\hfx_weather_data.csv",
+    r"hfx_weather_data.csv",
     na_values=missing_values,
     keep_default_na=True,
     encoding="latin1"
 )
-dates = pd.read_csv(r"C:\Users\joel regular\Downloads\Git\HRMTransitWebsite\calendar_dates.txt")
+dates = pd.read_csv(r"calendar_dates.txt")
 
 # extract date and hour from Start Time
 data["Start Time"] = pd.to_datetime(data["Start Time"])
@@ -47,10 +47,10 @@ weather_merge_cols = ["date", "hour", "temp_c", "rel_hum", "precip_mm", "wind_sp
 data = pd.merge(data, clean_weather[weather_merge_cols], on=["date", "hour"], how="left")
 
 # load gtfs files
-shapes = pd.read_csv(r"C:\Users\joel regular\Downloads\Git\HRMTransitWebsite\shapes.txt")
-stop_times = pd.read_csv(r"C:\Users\joel regular\Downloads\Git\HRMTransitWebsite\stop_times.txt")
-trips = pd.read_csv(r"C:\Users\joel regular\Downloads\Git\HRMTransitWebsite\trips.txt")
-routes = pd.read_csv(r"C:\Users\joel regular\Downloads\Git\HRMTransitWebsite\routes.txt")
+shapes = pd.read_csv(r"shapes.txt")
+stop_times = pd.read_csv(r"stop_times.txt")
+trips = pd.read_csv(r"trips.txt")
+routes = pd.read_csv(r"routes.txt")
 
 # check if shape crosses macdonald or mackay bridge
 def check_bridge(group):
@@ -92,4 +92,4 @@ data["route_length_km"] = data["route_length_km"].fillna(data["route_length_km"]
 data["num_stops"] = data["num_stops"].fillna(data["num_stops"].median())
 
 # save dataset
-data.to_csv(r"C:\Users\joel regular\Downloads\Git\HRMTransitWebsite\halifax_transit_clean.csv", index=False)
+data.to_csv(r"halifax_transit_clean.csv", index=False)

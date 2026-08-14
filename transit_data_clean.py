@@ -5,7 +5,7 @@ import numpy as np
 import re
 
 data = pd.read_csv(
-    r"C:\Users\joel regular\Downloads\Git\HRMTransitWebsite\halifax_transit_data.csv",
+    r"halifax_transit_data.csv",
     low_memory=False,
     on_bad_lines="skip",
 ).copy()
