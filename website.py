@@ -11,8 +11,8 @@ from datetime import datetime
 #     layout="wide"
 # )
 
-# #importing functions from my own files in the repository
-# from functions import load_data, load_metrics, load_model, build_feature_grid, style_delay_cell, WEATHER_PRESETS, LABEL_MAP
+#importing functions from my own files in the repository
+from functions import load_data, load_metrics, load_model, build_feature_grid, style_delay_cell, WEATHER_PRESETS, LABEL_MAP
 
 
 
@@ -517,4 +517,26 @@ from datetime import datetime
 #         st.warning("No historical data available for this specific route and branch selection.")
 
 
-st.title("Test Check")
+import streamlit as st
+
+st.title("Halifax Transit Performance Analytics")
+st.write("---")
+
+# Step 1: Imports
+st.write("⏳ Step 1: Importing libraries...")
+import pandas as pd
+import xgboost as xgb
+from functions import load_data
+st.write("✅ Step 1 Complete: Heavy libraries & functions imported!")
+
+# Step 2: Data Loading
+st.write("⏳ Step 2: Loading transit dataset...")
+df, branch_lookup, route_col, branch_col = load_data()
+st.write(f"✅ Step 2 Complete: Dataset loaded! Shape: {df.shape}")
+
+# Step 3: Model Loading
+st.write("⏳ Step 3: Loading XGBoost model...")
+model = load_model()
+st.write("✅ Step 3 Complete: Model loaded successfully!")
+
+st.success("🎉 Everything loaded without crashing!")
