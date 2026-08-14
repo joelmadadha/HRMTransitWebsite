@@ -531,7 +531,9 @@ st.write("✅ Step 1 Complete: Heavy libraries & functions imported!")
 
 # Step 2: Data Loading
 st.write("⏳ Step 2: Loading transit dataset...")
-df, branch_lookup, route_col, branch_col = load_data()
+df, branch_lookup, route_col, branch_col = load_data("halifax_transit_clean.parquet")
+if df is not None:
+    st.write("Data loaded successfully!", df.head())
 st.write(f"✅ Step 2 Complete: Dataset loaded! Shape: {df.shape}")
 
 # Step 3: Model Loading
