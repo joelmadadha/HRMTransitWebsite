@@ -170,39 +170,44 @@ def load_gtfs_lookup():
 @st.cache_data
 def load_filtered_data(selected_route=None):
     """Queries and loads into RAM only the rows matching the selected route and valid dates (<= 2026)."""
-    conn = duckdb.connect()
+    try:
+        conn = duckdb.connect()
 
-    # Base SQL filter for date cutoff
-    where_conditions = ["TRY_CAST(\"Start Time\" AS TIMESTAMP) <= '2026-12-31 23:59:59'"]
+        # Build SQL query safely with explicit double quotes for column names with spaces
+        query = f"""
+            SELECT * 
+            FROM '{PARQUET_FILE}'
+            WHERE TRY_CAST("Start Time" AS TIMESTAMP) <= '2026-12-31 23:59:59'
+        """
 
-    if selected_route and selected_route != "All":
-        where_conditions.append(f"Route = '{selected_route}'")
+        if selected_route and selected_route != "All":
+            # Sanitize single quotes in route string
+            safe_route = str(selected_route).replace("'", "''")
+            query += f" AND Route = '{safe_route}'"
 
-    where_clause = "WHERE " + " AND ".join(where_conditions)
+        df = conn.execute(query).df()
 
-    query = f"""
-        SELECT * 
-        FROM '{PARQUET_FILE}'
-        {where_clause}
-    """
-    df = conn.execute(query).df()
+        if df.empty:
+            st.warning(f"No records found for route: {selected_route}")
+            return pd.DataFrame(), "Route", "route_branch"
 
-    if df.empty:
-        return df, "Route", "route_branch"
+        # Datetime conversion and temporal features
+        df["Start Time"] = pd.to_datetime(df["Start Time"])
+        df["Hour"] = df["Start Time"].dt.hour.astype("int8")
+        df["Month"] = df["Start Time"].dt.month_name().astype("category")
+        df["Day of the Week"] = df["Start Time"].dt.day_name().astype("category")
 
-    # Convert datetimes and extract temporal features on the filtered subset
-    df["Start Time"] = pd.to_datetime(df["Start Time"])
-    df["Hour"] = df["Start Time"].dt.hour.astype("int8")
-    df["Month"] = df["Start Time"].dt.month_name().astype("category")
-    df["Day of the Week"] = df["Start Time"].dt.day_name().astype("category")
+        # Column mappings
+        branch_col = "route_branch" if "route_branch" in df.columns else ("Branch" if "Branch" in df.columns else "Route")
+        route_col = "Route" if "Route" in df.columns else branch_col
 
-    # Column mappings
-    branch_col = "route_branch" if "route_branch" in df.columns else ("Branch" if "Branch" in df.columns else "Route")
-    route_col = "Route" if "Route" in df.columns else branch_col
+        branch_str = df[branch_col].astype(str)
+        has_underscore = branch_str.str.contains("_", regex=False)
+        df["Branch_Clean"] = branch_str.where(~has_underscore, branch_str.str.split("_").str[1]).astype("category")
 
-    # Clean display branch name
-    branch_str = df[branch_col].astype(str)
-    has_underscore = branch_str.str.contains("_", regex=False)
-    df["Branch_Clean"] = branch_str.where(~has_underscore, branch_str.str.split("_").str[1]).astype("category")
+        return df, route_col, branch_col
 
-    return df, route_col, branch_col
+    except Exception as e:
+        st.error("❌ Error executing load_filtered_data():")
+        st.exception(e)
+        return pd.DataFrame(), "Route", "route_branch"
