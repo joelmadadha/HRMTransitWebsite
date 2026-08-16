@@ -541,8 +541,9 @@ from functions import load_data, load_metrics, load_model, build_feature_grid, s
 
 # st.success("🎉 Everything loaded without crashing!")
 
-import pandas as pd
+
 import streamlit as st
+import pandas as pd
 from functions import get_route_list, load_filtered_data, load_gtfs_lookup
 
 st.set_page_config(page_title="Halifax Transit Analytics", layout="wide")
