@@ -562,7 +562,7 @@ try:
         branch_lookup = load_gtfs_lookup()
 
         # 3. Load only the data needed for the active selection using Polars
-        df, route_col, branch_col = load_filtered_data(selected_route)
+        df, route_col, branch_col = load_filtered_data_polars(selected_route)
 
         # 4. Display status & subset summary
         st.success(f"Successfully loaded **{len(df):,}** records for route: **{selected_route}**")
