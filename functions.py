@@ -157,20 +157,11 @@ def get_route_list():
 
 @st.cache_data
 def load_gtfs_lookup():
-    """Lazily aggregates GTFS branch metrics."""
-    df_polars = (
-        pl.scan_parquet(PARQUET_FILE)
-        .group_by("route_branch")
-        .agg([
-            pl.col("crosses_bridge").max().alias("crosses_bridge"),
-            pl.col("route_length_km").mean().alias("route_length_km"),
-            pl.col("num_stops").mean().alias("num_stops"),
-            pl.col("direction_sin").mean().alias("direction_sin"),
-            pl.col("direction_cos").mean().alias("direction_cos"),
-        ])
-        .collect()
-    )
-    return df_polars.to_pandas()
+    """Loads pre-aggregated GTFS branch metrics from a lightweight local CSV."""
+    lookup_path = os.path.join(BASE_DIR, "gtfs_lookup.csv")
+    if os.path.exists(lookup_path):
+        return pd.read_csv(lookup_path)
+    return pd.DataFrame()
 
 @st.cache_data
 def load_filtered_data(selected_route=None):
