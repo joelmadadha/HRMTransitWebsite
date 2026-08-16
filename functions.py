@@ -6,7 +6,7 @@ from xgboost import XGBRegressor
 import json
 import numpy as np
 import duckdb
-
+import polars as pl
 
 PARQUET_FILE = "halifax_transit_clean.parquet"
 import os
@@ -144,19 +144,15 @@ def check_file_exists():
 
 @st.cache_data
 def get_route_list():
-    if not os.path.exists(PARQUET_FILE):
-        raise FileNotFoundError(f"Parquet file not found at: {PARQUET_FILE}")
-        
-    conn = duckdb.connect()
-    # Query distinct routes safely
-    query = f"""
-        SELECT DISTINCT Route 
-        FROM '{PARQUET_FILE}'
-        WHERE Route IS NOT NULL
-        ORDER BY Route
-    """
-    routes = conn.execute(query).fetchall()
-    return [r[0] for r in routes]
+    """Lazily fetches unique routes without loading full dataset into RAM."""
+    return (
+        pl.scan_parquet("halifax_transit_clean.parquet")
+        .select("Route")
+        .unique()
+        .collect()
+        .get_column("Route")
+        .to_list()
+    )
 
 @st.cache_data
 def load_gtfs_lookup():
@@ -175,30 +171,20 @@ def load_gtfs_lookup():
     return conn.execute(query).df()
 
 @st.cache_data
-def load_filtered_data(selected_route=None):
-    conn = duckdb.connect()
-    
-    where_clause = ""
+def load_filtered_data_polars(selected_route="All"):
+    """Streams ONLY matching route rows into memory."""
+    # 1. scan_parquet creates a lazy query graph (0 MB RAM used)
+    q = pl.scan_parquet("halifax_transit_clean.parquet")
+
+    # 2. Filter out future date corruptions lazily
+    q = q.filter(pl.col("Start Time").str.to_datetime() <= pl.datetime(2026, 12, 31))
+
+    # 3. Apply route filter before reading data
     if selected_route and selected_route != "All":
-        safe_route = str(selected_route).replace("'", "''")
-        where_clause = f"WHERE Route = '{safe_route}'"
+        q = q.filter(pl.col("Route") == selected_route)
 
-    query = f"SELECT * FROM '{PARQUET_FILE}' {where_clause}"
-    df = conn.execute(query).df()
+    # 4. .collect() evaluates the query and loads ONLY the matching subset into RAM
+    df_polars = q.collect()
 
-    if df.empty:
-        return pd.DataFrame(), "Route", "route_branch"
-
-    df["Start Time"] = pd.to_datetime(df["Start Time"])
-    df["Hour"] = df["Start Time"].dt.hour.astype("int8")
-    df["Month"] = df["Start Time"].dt.month_name().astype("category")
-    df["Day of the Week"] = df["Start Time"].dt.day_name().astype("category")
-
-    branch_col = "route_branch" if "route_branch" in df.columns else ("Branch" if "Branch" in df.columns else "Route")
-    route_col = "Route" if "Route" in df.columns else branch_col
-
-    branch_str = df[branch_col].astype(str)
-    has_underscore = branch_str.str.contains("_", regex=False)
-    df["Branch_Clean"] = branch_str.where(~has_underscore, branch_str.str.split("_").str[1]).astype("category")
-
-    return df, route_col, branch_col
+    # Convert to Pandas for Streamlit rendering/compatibility
+    return df_polars.to_pandas()

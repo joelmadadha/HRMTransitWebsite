@@ -552,14 +552,19 @@ try:
     from functions import check_file_exists, get_route_list, load_filtered_data, load_gtfs_lookup
 
     if not check_file_exists():
-        st.error("❌ `halifax_transit_clean.parquet` was not found in the root repository directory.")
+        st.error("❌ `halifax_transit_clean.parquet` was not found in the root directory.")
     else:
+        # 1. Load route dropdown list instantly via Polars lazy scanning
         routes = get_route_list()
         selected_route = st.selectbox("Select Route to Inspect:", options=["All"] + routes)
 
+        # 2. Load GTFS lookup table (Aggregated on the fly)
         branch_lookup = load_gtfs_lookup()
+
+        # 3. Load only the data needed for the active selection using Polars
         df, route_col, branch_col = load_filtered_data(selected_route)
 
+        # 4. Display status & subset summary
         st.success(f"Successfully loaded **{len(df):,}** records for route: **{selected_route}**")
 
         col1, col2 = st.columns(2)
