@@ -549,7 +549,7 @@ st.set_page_config(page_title="Halifax Transit Analytics", layout="wide")
 st.title("🚌 Halifax Transit Performance Analytics")
 
 try:
-    from functions import check_file_exists, get_route_list, load_filtered_data, load_gtfs_lookup
+    from functions import check_file_exists, get_route_list, load_filtered_data_polars, load_gtfs_lookup
 
     if not check_file_exists():
         st.error("❌ `halifax_transit_clean.parquet` was not found in the root directory.")
