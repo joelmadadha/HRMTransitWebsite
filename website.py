@@ -517,26 +517,55 @@ from functions import load_data, load_metrics, load_model, build_feature_grid, s
 #         st.warning("No historical data available for this specific route and branch selection.")
 
 
-import streamlit as st
+# import streamlit as st
 
-st.title("Halifax Transit Performance Analytics")
-st.write("---")
+# st.title("Halifax Transit Performance Analytics")
+# st.write("---")
 
-# Step 1: Imports
-st.write("⏳ Step 1: Importing libraries...")
+# # Step 1: Imports
+# st.write("⏳ Step 1: Importing libraries...")
+# import pandas as pd
+# import xgboost as xgb
+# from functions import load_data
+# st.write("✅ Step 1 Complete: Heavy libraries & functions imported!")
+
+# # Step 2: Data Loading
+# st.write("⏳ Step 2: Loading transit dataset...")
+# df, branch_lookup, route_col, branch_col = load_data()
+# st.write(f"✅ Step 2 Complete: Dataset loaded! Shape: {df.shape}")
+
+# # Step 3: Model Loading
+# st.write("⏳ Step 3: Loading XGBoost model...")
+# model = load_model()
+# st.write("✅ Step 3 Complete: Model loaded successfully!")
+
+# st.success("🎉 Everything loaded without crashing!")
+
 import pandas as pd
-import xgboost as xgb
-from functions import load_data
-st.write("✅ Step 1 Complete: Heavy libraries & functions imported!")
+import streamlit as st
+from functions import get_route_list, load_filtered_data, load_gtfs_lookup
 
-# Step 2: Data Loading
-st.write("⏳ Step 2: Loading transit dataset...")
-df, branch_lookup, route_col, branch_col = load_data()
-st.write(f"✅ Step 2 Complete: Dataset loaded! Shape: {df.shape}")
+st.set_page_config(page_title="Halifax Transit Analytics", layout="wide")
+st.title("🚌 Halifax Transit Performance Analytics")
 
-# Step 3: Model Loading
-st.write("⏳ Step 3: Loading XGBoost model...")
-model = load_model()
-st.write("✅ Step 3 Complete: Model loaded successfully!")
+# 1. Load route dropdown list instantly via DuckDB
+routes = get_route_list()
+selected_route = st.selectbox("Select Route to Inspect:", options=["All"] + routes)
 
-st.success("🎉 Everything loaded without crashing!")
+# 2. Load GTFS lookup table (aggregated directly in SQL)
+branch_lookup = load_gtfs_lookup()
+
+# 3. Load only the data needed for the active selection
+df, route_col, branch_col = load_filtered_data(selected_route)
+
+# 4. Display status & subset summary
+st.success(f"Successfully loaded **{len(df):,}** records for route: **{selected_route}**")
+
+col1, col2 = st.columns(2)
+with col1:
+    st.subheader("Data Preview")
+    st.dataframe(df.head(100), use_container_width=True)
+
+with col2:
+    st.subheader("GTFS Branch Lookup Table")
+    st.dataframe(branch_lookup, use_container_width=True)

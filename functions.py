@@ -5,6 +5,10 @@ import pandas as pd
 from xgboost import XGBRegressor
 import json
 import numpy as np
+import duckdb
+
+
+PARQUET_FILE = "halifax_transit_clean.parquet"
 
 @st.cache_data
 def load_data():
@@ -142,3 +146,80 @@ def style_delay_cell(val):
             return 'background-color: #4a1215; color: #ff6b6b; font-weight: bold;' 
     except:
         return ''
+
+
+
+
+
+@st.cache_data
+def get_route_list():
+    """Fetches unique routes instantly from Parquet without loading the dataset into memory."""
+    conn = duckdb.connect()
+    query = f"""
+        SELECT DISTINCT Route 
+        FROM '{PARQUET_FILE}'
+        WHERE TRY_CAST("Start Time" AS TIMESTAMP) <= '2026-12-31 23:59:59'
+        ORDER BY Route
+    """
+    routes = conn.execute(query).fetchall()
+    return [r[0] for r in routes if r[0] is not None]
+
+
+@st.cache_data
+def load_gtfs_lookup():
+    """Generates GTFS branch aggregate metrics directly in DuckDB SQL."""
+    conn = duckdb.connect()
+    query = f"""
+        SELECT 
+            route_branch,
+            MAX(crosses_bridge) AS crosses_bridge,
+            AVG(route_length_km) AS route_length_km,
+            AVG(num_stops) AS num_stops,
+            AVG(direction_sin) AS direction_sin,
+            AVG(direction_cos) AS direction_cos
+        FROM '{PARQUET_FILE}'
+        WHERE TRY_CAST("Start Time" AS TIMESTAMP) <= '2026-12-31 23:59:59'
+        GROUP BY route_branch
+    """
+    return conn.execute(query).df()
+
+
+@st.cache_data
+def load_filtered_data(selected_route=None):
+    """Queries and loads into RAM only the rows matching the selected route and valid dates (<= 2026)."""
+    conn = duckdb.connect()
+
+    # Base SQL filter for date cutoff
+    where_conditions = ["TRY_CAST(\"Start Time\" AS TIMESTAMP) <= '2026-12-31 23:59:59'"]
+
+    if selected_route and selected_route != "All":
+        where_conditions.append(f"Route = '{selected_route}'")
+
+    where_clause = "WHERE " + " AND ".join(where_conditions)
+
+    query = f"""
+        SELECT * 
+        FROM '{PARQUET_FILE}'
+        {where_clause}
+    """
+    df = conn.execute(query).df()
+
+    if df.empty:
+        return df, "Route", "route_branch"
+
+    # Convert datetimes and extract temporal features on the filtered subset
+    df["Start Time"] = pd.to_datetime(df["Start Time"])
+    df["Hour"] = df["Start Time"].dt.hour.astype("int8")
+    df["Month"] = df["Start Time"].dt.month_name().astype("category")
+    df["Day of the Week"] = df["Start Time"].dt.day_name().astype("category")
+
+    # Column mappings
+    branch_col = "route_branch" if "route_branch" in df.columns else ("Branch" if "Branch" in df.columns else "Route")
+    route_col = "Route" if "Route" in df.columns else branch_col
+
+    # Clean display branch name
+    branch_str = df[branch_col].astype(str)
+    has_underscore = branch_str.str.contains("_", regex=False)
+    df["Branch_Clean"] = branch_str.where(~has_underscore, branch_str.str.split("_").str[1]).astype("category")
+
+    return df, route_col, branch_col

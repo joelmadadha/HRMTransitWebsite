@@ -1,6 +1,7 @@
 streamlit
 pandas
 numpy
+duckdb
 xgboost
 plotly
 pyarrow
