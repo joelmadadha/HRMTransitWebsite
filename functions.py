@@ -133,8 +133,6 @@ def style_delay_cell(val):
 
 
 
-
-# Resolve absolute path to the parquet file relative to this script
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PARQUET_FILE = os.path.join(BASE_DIR, "halifax_transit_clean.parquet")
 
@@ -144,47 +142,64 @@ def check_file_exists():
 
 @st.cache_data
 def get_route_list():
-    """Lazily fetches unique routes without loading full dataset into RAM."""
-    return (
-        pl.scan_parquet("halifax_transit_clean.parquet")
+    """Lazily fetches unique routes using Polars."""
+    routes = (
+        pl.scan_parquet(PARQUET_FILE)
         .select("Route")
+        .drop_nulls()
         .unique()
+        .sort("Route")
         .collect()
         .get_column("Route")
         .to_list()
     )
+    return routes
 
 @st.cache_data
 def load_gtfs_lookup():
-    conn = duckdb.connect()
-    query = f"""
-        SELECT 
-            route_branch,
-            MAX(crosses_bridge) AS crosses_bridge,
-            AVG(route_length_km) AS route_length_km,
-            AVG(num_stops) AS num_stops,
-            AVG(direction_sin) AS direction_sin,
-            AVG(direction_cos) AS direction_cos
-        FROM '{PARQUET_FILE}'
-        GROUP BY route_branch
-    """
-    return conn.execute(query).df()
+    """Lazily aggregates GTFS branch metrics."""
+    df_polars = (
+        pl.scan_parquet(PARQUET_FILE)
+        .group_by("route_branch")
+        .agg([
+            pl.col("crosses_bridge").max().alias("crosses_bridge"),
+            pl.col("route_length_km").mean().alias("route_length_km"),
+            pl.col("num_stops").mean().alias("num_stops"),
+            pl.col("direction_sin").mean().alias("direction_sin"),
+            pl.col("direction_cos").mean().alias("direction_cos"),
+        ])
+        .collect()
+    )
+    return df_polars.to_pandas()
 
 @st.cache_data
-def load_filtered_data_polars(selected_route="All"):
-    """Streams ONLY matching route rows into memory."""
-    # 1. scan_parquet creates a lazy query graph (0 MB RAM used)
-    q = pl.scan_parquet("halifax_transit_clean.parquet")
-
-    # 2. Filter out future date corruptions lazily
-    q = q.filter(pl.col("Start Time").str.to_datetime() <= pl.datetime(2026, 12, 31))
-
-    # 3. Apply route filter before reading data
+def load_filtered_data(selected_route=None):
+    """Streams matching route rows into memory without touching string parsing on datetimes."""
+    q = pl.scan_parquet(PARQUET_FILE)
+    
+    # Apply route predicate filter before scanning into memory
     if selected_route and selected_route != "All":
-        q = q.filter(pl.col("Route") == selected_route)
+        q = q.filter(pl.col("Route") == str(selected_route))
+        
+    # Collect matching rows into memory
+    df = q.collect().to_pandas()
+    
+    if df.empty:
+        return df, "Route", "route_branch"
 
-    # 4. .collect() evaluates the query and loads ONLY the matching subset into RAM
-    df_polars = q.collect()
+    # Datetime parsing & 2026 filter handled safely in Pandas
+    df["Start Time"] = pd.to_datetime(df["Start Time"])
+    df = df[df["Start Time"].dt.year <= 2026].copy()
 
-    # Convert to Pandas for Streamlit rendering/compatibility
-    return df_polars.to_pandas()
+    df["Hour"] = df["Start Time"].dt.hour.astype("int8")
+    df["Month"] = df["Start Time"].dt.month_name().astype("category")
+    df["Day of the Week"] = df["Start Time"].dt.day_name().astype("category")
+
+    branch_col = "route_branch" if "route_branch" in df.columns else ("Branch" if "Branch" in df.columns else "Route")
+    route_col = "Route" if "Route" in df.columns else branch_col
+
+    branch_str = df[branch_col].astype(str)
+    has_underscore = branch_str.str.contains("_", regex=False)
+    df["Branch_Clean"] = branch_str.where(~has_underscore, branch_str.str.split("_").str[1]).astype("category")
+
+    return df, route_col, branch_col
