@@ -543,30 +543,35 @@ from functions import load_data, load_metrics, load_model, build_feature_grid, s
 
 
 import streamlit as st
-import pandas as pd
-from functions import get_route_list, load_filtered_data, load_gtfs_lookup
+import traceback
 
 st.set_page_config(page_title="Halifax Transit Analytics", layout="wide")
 st.title("🚌 Halifax Transit Performance Analytics")
 
-# 1. Load route dropdown list instantly via DuckDB
-routes = get_route_list()
-selected_route = st.selectbox("Select Route to Inspect:", options=["All"] + routes)
+try:
+    from functions import check_file_exists, get_route_list, load_filtered_data, load_gtfs_lookup
 
-# 2. Load GTFS lookup table (aggregated directly in SQL)
-branch_lookup = load_gtfs_lookup()
+    if not check_file_exists():
+        st.error("❌ `halifax_transit_clean.parquet` was not found in the root repository directory.")
+    else:
+        routes = get_route_list()
+        selected_route = st.selectbox("Select Route to Inspect:", options=["All"] + routes)
 
-# 3. Load only the data needed for the active selection
-df, route_col, branch_col = load_filtered_data(selected_route)
+        branch_lookup = load_gtfs_lookup()
+        df, route_col, branch_col = load_filtered_data(selected_route)
 
-# 4. Display status & subset summary
-st.success(f"Successfully loaded **{len(df):,}** records for route: **{selected_route}**")
+        st.success(f"Successfully loaded **{len(df):,}** records for route: **{selected_route}**")
 
-col1, col2 = st.columns(2)
-with col1:
-    st.subheader("Data Preview")
-    st.dataframe(df.head(100), use_container_width=True)
+        col1, col2 = st.columns(2)
+        with col1:
+            st.subheader("Data Preview")
+            st.dataframe(df.head(100), use_container_width=True)
 
-with col2:
-    st.subheader("GTFS Branch Lookup Table")
-    st.dataframe(branch_lookup, use_container_width=True)
+        with col2:
+            st.subheader("GTFS Branch Lookup Table")
+            st.dataframe(branch_lookup, use_container_width=True)
+
+except Exception as e:
+    st.error("🚨 An error occurred during startup:")
+    st.exception(e)
+    st.code(traceback.format_exc())

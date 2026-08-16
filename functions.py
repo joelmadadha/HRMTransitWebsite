@@ -134,23 +134,32 @@ def style_delay_cell(val):
 
 
 
+# Resolve absolute path to the parquet file relative to this script
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+PARQUET_FILE = os.path.join(BASE_DIR, "halifax_transit_clean.parquet")
+
+@st.cache_data
+def check_file_exists():
+    return os.path.exists(PARQUET_FILE)
+
 @st.cache_data
 def get_route_list():
-    """Fetches unique routes instantly from Parquet without loading the dataset into memory."""
+    if not os.path.exists(PARQUET_FILE):
+        raise FileNotFoundError(f"Parquet file not found at: {PARQUET_FILE}")
+        
     conn = duckdb.connect()
+    # Query distinct routes safely
     query = f"""
         SELECT DISTINCT Route 
         FROM '{PARQUET_FILE}'
-        WHERE TRY_CAST("Start Time" AS TIMESTAMP) <= '2026-12-31 23:59:59'
+        WHERE Route IS NOT NULL
         ORDER BY Route
     """
     routes = conn.execute(query).fetchall()
-    return [r[0] for r in routes if r[0] is not None]
-
+    return [r[0] for r in routes]
 
 @st.cache_data
 def load_gtfs_lookup():
-    """Generates GTFS branch aggregate metrics directly in DuckDB SQL."""
     conn = duckdb.connect()
     query = f"""
         SELECT 
@@ -161,53 +170,35 @@ def load_gtfs_lookup():
             AVG(direction_sin) AS direction_sin,
             AVG(direction_cos) AS direction_cos
         FROM '{PARQUET_FILE}'
-        WHERE TRY_CAST("Start Time" AS TIMESTAMP) <= '2026-12-31 23:59:59'
         GROUP BY route_branch
     """
     return conn.execute(query).df()
 
-
 @st.cache_data
 def load_filtered_data(selected_route=None):
-    """Queries and loads into RAM only the rows matching the selected route and valid dates (<= 2026)."""
-    try:
-        conn = duckdb.connect()
+    conn = duckdb.connect()
+    
+    where_clause = ""
+    if selected_route and selected_route != "All":
+        safe_route = str(selected_route).replace("'", "''")
+        where_clause = f"WHERE Route = '{safe_route}'"
 
-        # Build SQL query safely with explicit double quotes for column names with spaces
-        query = f"""
-            SELECT * 
-            FROM '{PARQUET_FILE}'
-            WHERE TRY_CAST("Start Time" AS TIMESTAMP) <= '2026-12-31 23:59:59'
-        """
+    query = f"SELECT * FROM '{PARQUET_FILE}' {where_clause}"
+    df = conn.execute(query).df()
 
-        if selected_route and selected_route != "All":
-            # Sanitize single quotes in route string
-            safe_route = str(selected_route).replace("'", "''")
-            query += f" AND Route = '{safe_route}'"
-
-        df = conn.execute(query).df()
-
-        if df.empty:
-            st.warning(f"No records found for route: {selected_route}")
-            return pd.DataFrame(), "Route", "route_branch"
-
-        # Datetime conversion and temporal features
-        df["Start Time"] = pd.to_datetime(df["Start Time"])
-        df["Hour"] = df["Start Time"].dt.hour.astype("int8")
-        df["Month"] = df["Start Time"].dt.month_name().astype("category")
-        df["Day of the Week"] = df["Start Time"].dt.day_name().astype("category")
-
-        # Column mappings
-        branch_col = "route_branch" if "route_branch" in df.columns else ("Branch" if "Branch" in df.columns else "Route")
-        route_col = "Route" if "Route" in df.columns else branch_col
-
-        branch_str = df[branch_col].astype(str)
-        has_underscore = branch_str.str.contains("_", regex=False)
-        df["Branch_Clean"] = branch_str.where(~has_underscore, branch_str.str.split("_").str[1]).astype("category")
-
-        return df, route_col, branch_col
-
-    except Exception as e:
-        st.error("❌ Error executing load_filtered_data():")
-        st.exception(e)
+    if df.empty:
         return pd.DataFrame(), "Route", "route_branch"
+
+    df["Start Time"] = pd.to_datetime(df["Start Time"])
+    df["Hour"] = df["Start Time"].dt.hour.astype("int8")
+    df["Month"] = df["Start Time"].dt.month_name().astype("category")
+    df["Day of the Week"] = df["Start Time"].dt.day_name().astype("category")
+
+    branch_col = "route_branch" if "route_branch" in df.columns else ("Branch" if "Branch" in df.columns else "Route")
+    route_col = "Route" if "Route" in df.columns else branch_col
+
+    branch_str = df[branch_col].astype(str)
+    has_underscore = branch_str.str.contains("_", regex=False)
+    df["Branch_Clean"] = branch_str.where(~has_underscore, branch_str.str.split("_").str[1]).astype("category")
+
+    return df, route_col, branch_col
