@@ -13,26 +13,40 @@ import os
 
 # Temporarily remove @st.cache_data while debugging
 @st.cache_data
-def load_data(relative_filename):
-    try:
-        # Use absolute path resolving relative to this script file
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        full_path = os.path.join(script_dir, relative_filename)
-        
-        # Check if file exists before attempting load
-        if not os.path.exists(full_path):
-            st.error(f"File not found at resolved path: {full_path}")
-            return None
+def load_data():
+    df = pd.read_csv("halifax_transit_clean.parquet")
+    df["Start Time"] = pd.to_datetime(df["Start Time"])
+    
+    # Extract temporal features for exploration
+    df["Hour"] = df["Start Time"].dt.hour
+    df["Month"] = df["Start Time"].dt.month_name()
+    df["Day of the Week"] = df["Start Time"].dt.day_name()
 
-        # Load your data
-        df = pd.read_parquet(full_path) # adjust reader as needed
-        return df
+    # Identify Branch column
+    branch_col = "route_branch" if "route_branch" in df.columns else ("Branch" if "Branch" in df.columns else "Route")
+    
+    # Base Route column extraction
+    if "Route" in df.columns and df["Route"].nunique() < df[branch_col].nunique():
+        route_col = "Route"
+    else:
+        df["Route_Base"] = df[branch_col].astype(str).str.split("-").str[0].str.strip()
+        route_col = "Route_Base"
 
-    except Exception as e:
-        st.error("An error occurred inside load_data():")
-        st.exception(e)
-        return None
+    # Clean display branch name (strips text before '_')
+    df["Branch_Clean"] = df[branch_col].apply(lambda x: str(x).split("_")[1] if "_" in str(x) else str(x))
 
+    # Build GTFS branch lookup table
+    gtfs_cols = ["route_id", "route_length_km", "crosses_bridge", "num_stops", "route_type", "direction_sin", "direction_cos"]
+    existing_gtfs_cols = [c for c in gtfs_cols if c in df.columns]
+    
+    if existing_gtfs_cols:
+        branch_lookup = df.groupby(branch_col)[existing_gtfs_cols].agg({
+            c: "max" if c == "crosses_bridge" else "mean" for c in existing_gtfs_cols
+        }).reset_index()
+    else:
+        branch_lookup = pd.DataFrame()
+
+    return df, branch_lookup, route_col, branch_col
 @st.cache_resource
 def load_model():
     model = XGBRegressor()
@@ -133,64 +147,3 @@ def style_delay_cell(val):
 
 
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-PARQUET_FILE = os.path.join(BASE_DIR, "halifax_transit_clean.parquet")
-
-@st.cache_data
-def check_file_exists():
-    return os.path.exists(PARQUET_FILE)
-
-@st.cache_data
-def get_route_list():
-    """Lazily fetches unique routes using Polars."""
-    routes = (
-        pl.scan_parquet(PARQUET_FILE)
-        .select("Route")
-        .drop_nulls()
-        .unique()
-        .sort("Route")
-        .collect()
-        .get_column("Route")
-        .to_list()
-    )
-    return routes
-
-@st.cache_data
-def load_gtfs_lookup():
-    """Loads pre-aggregated GTFS branch metrics from a lightweight local CSV."""
-    lookup_path = os.path.join(BASE_DIR, "gtfs_lookup.csv")
-    if os.path.exists(lookup_path):
-        return pd.read_csv(lookup_path)
-    return pd.DataFrame()
-
-@st.cache_data
-def load_filtered_data(selected_route=None):
-    """Streams matching route rows into memory without touching string parsing on datetimes."""
-    q = pl.scan_parquet(PARQUET_FILE)
-    
-    # Apply route predicate filter before scanning into memory
-    if selected_route and selected_route != "All":
-        q = q.filter(pl.col("Route") == str(selected_route))
-        
-    # Collect matching rows into memory
-    df = q.collect().to_pandas()
-    
-    if df.empty:
-        return df, "Route", "route_branch"
-
-    # Datetime parsing & 2026 filter handled safely in Pandas
-    df["Start Time"] = pd.to_datetime(df["Start Time"])
-    df = df[df["Start Time"].dt.year <= 2026].copy()
-
-    df["Hour"] = df["Start Time"].dt.hour.astype("int8")
-    df["Month"] = df["Start Time"].dt.month_name().astype("category")
-    df["Day of the Week"] = df["Start Time"].dt.day_name().astype("category")
-
-    branch_col = "route_branch" if "route_branch" in df.columns else ("Branch" if "Branch" in df.columns else "Route")
-    route_col = "Route" if "Route" in df.columns else branch_col
-
-    branch_str = df[branch_col].astype(str)
-    has_underscore = branch_str.str.contains("_", regex=False)
-    df["Branch_Clean"] = branch_str.where(~has_underscore, branch_str.str.split("_").str[1]).astype("category")
-
-    return df, route_col, branch_col
