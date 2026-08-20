@@ -113,6 +113,15 @@ with tab1:
         else:
             date_list = pd.date_range(start_date, end_date, freq="D")
             expected_features = model.get_booster().feature_names
+            if not expected_features:
+                # Hardcode or extract your 24 expected feature names
+                expected_features = [
+                    "Service Day", "hour", "is_weekend", "is_academic_year", "is_holiday_schedule",
+                    "hour_sin", "hour_cos", "month_sin", "month_cos", "day_sin", "day_cos",
+                    "is_morning_rush_hour", "is_evening_rush_hour", "temp_c", "rel_hum",
+                    "precip_mm", "wind_speed_kmh", "route_length_km", "crosses_bridge",
+                    "num_stops", "route_type", "direction_sin", "direction_cos"
+                ]
             preset = WEATHER_PRESETS[weather_condition]
             
             chart_records = []
