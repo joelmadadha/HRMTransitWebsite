@@ -14,7 +14,7 @@ import os
 # Temporarily remove @st.cache_data while debugging
 @st.cache_data
 def load_data():
-    df = pd.read_csv("halifax_transit_clean.parquet")
+    df = pd.read_parquet("halifax_transit_clean.parquet")
     df["Start Time"] = pd.to_datetime(df["Start Time"])
     
     # Extract temporal features for exploration
@@ -33,7 +33,9 @@ def load_data():
         route_col = "Route_Base"
 
     # Clean display branch name (strips text before '_')
-    df["Branch_Clean"] = df[branch_col].apply(lambda x: str(x).split("_")[1] if "_" in str(x) else str(x))
+    branch_str = df[branch_col].astype(str)
+    has_underscore = branch_str.str.contains("_", regex=False)
+    df["Branch_Clean"] = branch_str.where(~has_underscore, branch_str.str.split("_").str[1])
 
     # Build GTFS branch lookup table
     gtfs_cols = ["route_id", "route_length_km", "crosses_bridge", "num_stops", "route_type", "direction_sin", "direction_cos"]
