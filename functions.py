@@ -18,6 +18,7 @@ def load_data():
     df = pd.read_parquet("halifax_transit_clean.parquet")
     st.write("2nd test complete")
     df["Start Time"] = pd.to_datetime(df["Start Time"])
+    st.write("3rd test complete")
     
     # Extract temporal features for exploration
     df["Hour"] = df["Start Time"].dt.hour
