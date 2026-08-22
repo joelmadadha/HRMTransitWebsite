@@ -55,9 +55,10 @@ def load_data():
     return df, branch_lookup, route_col, branch_col
 @st.cache_resource
 def load_model():
+    st.write("load_model can run")
     model = XGBRegressor()
     model.load_model("halifax_transit_xgb.json")
-    
+    st.write("load_model successful")
     return model
 
 @st.cache_data
