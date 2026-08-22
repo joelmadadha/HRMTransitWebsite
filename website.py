@@ -29,7 +29,7 @@ def remove_route():
     if st.session_state.num_routes > 1:
         st.session_state.num_routes -= 1
 
-branch_lookup, route_col, branch_col = load_data()
+df, branch_lookup, route_col, branch_col = load_data()
 model = load_model()
 metrics = load_metrics()
 
