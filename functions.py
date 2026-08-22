@@ -7,7 +7,7 @@ import json
 import numpy as np
 import duckdb
 import polars as pl
-import sklearn
+import scikit-learn
 
 PARQUET_FILE = "halifax_transit_clean.parquet"
 import os
