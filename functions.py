@@ -50,9 +50,21 @@ def load_data():
         }).reset_index()
     else:
         branch_lookup = pd.DataFrame()
-    st.write("Final test complete")
 
+        # Downcast numeric columns to save memory
+    for col in df.select_dtypes(include=['float64']).columns:
+        df[col] = df[col].astype('float32')
+    
+    for col in df.select_dtypes(include=['int64']).columns:
+        df[col] = df[col].astype('int32')
+    
+    # Convert string categories (like Route and Branch) to category dtypes
+    for col in ["Route", "Branch_Clean", "route_branch", "Month", "Day of the Week"]:
+        if col in df.columns:
+            df[col] = df[col].astype("category")
+    st.write("final test complete")
     return df, branch_lookup, route_col, branch_col
+
 @st.cache_resource
 def load_model():
     st.write("load_model can run")
