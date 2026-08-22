@@ -50,13 +50,14 @@ def load_data():
         }).reset_index()
     else:
         branch_lookup = pd.DataFrame()
+        st.write("last test complete")
 
     return df, branch_lookup, route_col, branch_col
 @st.cache_resource
 def load_model():
     model = XGBRegressor()
     model.load_model("halifax_transit_xgb.json")
-    st.write("last test complete")
+    
     return model
 
 @st.cache_data
