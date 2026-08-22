@@ -52,7 +52,7 @@ def load_data():
         branch_lookup = pd.DataFrame()
     st.write("Final test complete")
 
-    return df, branch_lookup, route_col, branch_col
+    return branch_lookup, route_col, branch_col
 @st.cache_resource
 def load_model():
     st.write("load_model can run")
