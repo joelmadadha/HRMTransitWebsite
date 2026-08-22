@@ -14,7 +14,9 @@ import os
 # Temporarily remove @st.cache_data while debugging
 @st.cache_data
 def load_data():
+    st.write("1st test complete")
     df = pd.read_parquet("halifax_transit_clean.parquet")
+    st.write("2nd test complete")
     df["Start Time"] = pd.to_datetime(df["Start Time"])
     
     # Extract temporal features for exploration
