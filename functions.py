@@ -15,11 +15,8 @@ import os
 # Temporarily remove @st.cache_data while debugging
 @st.cache_data
 def load_data():
-    st.write("1st test complete")
     df = pd.read_parquet("halifax_transit_clean.parquet")
-    st.write("2nd test complete")
     df["Start Time"] = pd.to_datetime(df["Start Time"])
-    st.write("3rd test complete")
     
     # Extract temporal features for exploration
     df["Hour"] = df["Start Time"].dt.hour
@@ -28,7 +25,6 @@ def load_data():
 
     # Identify Branch column
     branch_col = "route_branch" if "route_branch" in df.columns else ("Branch" if "Branch" in df.columns else "Route")
-    st.write("4th test complete")
     # Base Route column extraction
     if "Route" in df.columns and df["Route"].nunique() < df[branch_col].nunique():
         route_col = "Route"
@@ -63,15 +59,12 @@ def load_data():
     for col in ["Route", "Branch_Clean", "route_branch", "Month", "Day of the Week"]:
         if col in df.columns:
             df[col] = df[col].astype("category")
-    st.write("final test complete")
     return df, branch_lookup, route_col, branch_col
 
 @st.cache_resource
 def load_model():
-    st.write("load_model can run")
     model = XGBRegressor()
     model.load_model("halifax_transit_xgb.json")
-    st.write("load_model successful")
     return model
 
 @st.cache_data
