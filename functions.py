@@ -27,7 +27,7 @@ def load_data():
 
     # Identify Branch column
     branch_col = "route_branch" if "route_branch" in df.columns else ("Branch" if "Branch" in df.columns else "Route")
-    
+    st.write("4th test complete")
     # Base Route column extraction
     if "Route" in df.columns and df["Route"].nunique() < df[branch_col].nunique():
         route_col = "Route"
@@ -56,6 +56,7 @@ def load_data():
 def load_model():
     model = XGBRegressor()
     model.load_model("halifax_transit_xgb.json")
+    st.write("last test complete")
     return model
 
 @st.cache_data
