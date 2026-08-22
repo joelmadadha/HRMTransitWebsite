@@ -50,7 +50,7 @@ def load_data():
         }).reset_index()
     else:
         branch_lookup = pd.DataFrame()
-        st.write("last test complete")
+    st.write("Final test complete")
 
     return df, branch_lookup, route_col, branch_col
 @st.cache_resource
