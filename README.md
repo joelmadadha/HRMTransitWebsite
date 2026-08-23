@@ -5,7 +5,7 @@ A machine learning-powered web application that predicts schedule-based delays f
 
 ## Link to the Website
 
-* There will be a website link here
+* [Here's the link to the website](https://hfx-transit-analytics.streamlit.app/)
 
 ---
 
